@@ -2,6 +2,7 @@ const axios = require('axios');
 const bcrypt = require('bcrypt');
 const mongoose = require('mongoose');
 const FormData = require('form-data');
+const {client} = require('./db');
 
 const userSchema = new mongoose.Schema({
     username: String,
@@ -42,4 +43,4 @@ const authenticateUser = async (username, password) => {
   }
 };
 
-module.exports = { handleProfilePictureUpload, authenticateUser };
+module.exports = { User, handleProfilePictureUpload, authenticateUser };

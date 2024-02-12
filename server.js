@@ -2,15 +2,19 @@ const express = require('express');
 const path = require('path');
 const http = require('http');
 const socketIO = require('socket.io');
-const passport = require('passport');
 const LocalStrategy = require('passport-local').Strategy;
 const session = require('express-session');
+const passport = require('passport');
 const bcrypt = require('bcrypt');
 const mongoose = require('mongoose');
 const winston = require('winston');
 const cors = require('cors');
 const Message = require('./models/message');
-const {authenticateUser, handleProfilePictureUpload} = require('./userController');
+const {User} = require('./userController');
+const {client, connect} = require('./db');
+const messagesRouter = require('./routes/messages');
+const userController = require('./userController');
+//const io = require('socket.io')(http);
 
 process.off('unhandledRejection', (reason, promise) => {
     console.error('Unhandled Rejection at: ', promise, 'reason: ', reason);
@@ -21,12 +25,27 @@ const config = {
 };
 
 const app = express();
+const port = 3000;
 const server = http.createServer(app);
 const io = socketIO(server);
 
+connect();
+
+process.on('SIGINT', () => {
+  client.close().then(() => {
+    console.log('Connection to MongoDB closed');
+    process.exit(0);
+  });
+});
+
+app.listen(port, () => {
+  console.log(`Server is running on port ${port}`)
+})
+
 mongoose.connect('mongodb://localhost:27017/chatapp', { 
-    connectTimeoutMS: 3000,
-    dbName: 'chatapp',
+  useNewUrlParser: true,
+  useUnifiedTopology: true,
+  connectTimeoutMS: 3000,
 });
 
 mongoose.connection.on('connecting', () => {
@@ -50,8 +69,6 @@ const userSchema = new mongoose.Schema({
   password: String,
 });
 
-
-
 // Setup logging
 const logger = winston.createLogger({
   transports: [
@@ -67,8 +84,8 @@ app.use(express.urlencoded({ extended: true }));
 app.use(session({ secret: 'your-secret-key', resave: true, saveUninitialized: true }));
 app.use(passport.initialize());
 app.use(passport.session());
+app.use('/api', messagesRouter);
 app.use(cors());
-app.use(express.static(__dirname));
 
 const sessionMiddleware = session({
   secret: 'your-secret-key',
@@ -103,12 +120,17 @@ passport.use(new LocalStrategy(
 
 // Serialize and deserialize user
 passport.serializeUser((user, done) => {
+  console.log('Serializer User:', user);
   done(null, user.id);
 });
 
 passport.deserializeUser((id, done) => {
-  User.findById(id, (err, user) => {
-    done(err, user);
+  User.findById(id).exec()
+  .then(user => {
+    done(null, user);
+  })
+  .catch(err => {
+    done(err);
   });
 });
 
@@ -126,7 +148,13 @@ io.use((socket, next) => {
 
 // Socket.io connection
 io.on('connection', (socket) => {
-  console.log('User connected');
+  if(!socket.request.session.passport || !socket.request.session.passport.user){
+    socket.emit('unauthorized', 'You are not authorized to join the chat.');
+    socket.disconnect();
+    return;
+  }
+
+  console.log('User connected:', socket.request.session.passport.user);
 
   socket.on('disconnect', () => {
       console.log('User disconnected');
@@ -144,8 +172,8 @@ io.on('connection', (socket) => {
     } catch (error){
       console.error('Error storing message in the database: ', error);
     }
-    socket.broadcast.emit('chat message', msg);
-    console.log('Emitted chat message to all clients');
+    io.emit('chat message', msg);
+    console.log('Emitted chat messages to all clients');
   });
 });
 
@@ -160,6 +188,48 @@ app.use((err, req, res, next) => {
   res.status(500).send('Something went wrong!');
 });
 
+app.post('/register', async (req, res) => {
+  try{
+    const { username, password } = req.body;
+    const existingUser = await User.findOne({ username });
+
+    if (existingUser){
+      return res.status(400).send('Username already taken');
+    }
+
+    const hashedPassword = await bcrypt.hash(password, 10);
+
+    const newUser = new User({
+      username, 
+      password: hashedPassword,
+    });
+
+    await newUser.save();
+
+    res.redirect('/login');
+  } catch(error){
+    console.error('Error during registration:', error);
+    res.status(500).send('Internal Server Error');
+  }
+});
+
+
+app.get('/', (req, res) => {
+  console.log('Authenticated: ', req.isAuthenticated());
+  if(!req.isAuthenticated()){
+    return res.render('dashboard', {user: req.user});
+  }
+  res.redirect('/login');
+});
+
+
+app.get('/login', (req, res) => {
+  res.render('login.ejs');
+});
+
+app.get('/register', (req, res) => {
+  res.render('register.ejs');
+});
 
 app.post('/login', passport.authenticate('local', {
   successRedirect: '/dashboard',
@@ -167,13 +237,20 @@ app.post('/login', passport.authenticate('local', {
   failureFlash: true,
 }));
 
-app.get('/dashboard', isAuthenticated, (req, res) => {
-  // Render the dashboard for authenticated users
-  res.render('dashboard', { user: req.user });
+app.post('/logout', (req, res) => {
+  req.logout();
+  res.redirect('/login');
 });
 
+app.get('/dashboard', isAuthenticated, (req, res) => {
+  const user = req.user;
+  res.render('dashboard.ejs', { user });
+});
+
+app.set('view engine', 'ejs');
+
 // Start the server
-const PORT = process.env.PORT || 3000;
+const PORT = process.env.PORT || 3001;
 server.listen(PORT, () => {
   console.log(`Server listening on port ${PORT}`);
 });

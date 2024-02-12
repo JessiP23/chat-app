@@ -3,15 +3,21 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Chat Application</title>
+  <title>Chat Dashboard</title>
 </head>
 <body>
+  <h1 id="welcomeMessage">Welcome to my </h1>
+
   <ul id="messages"></ul>
+
   <form id="form" action="">
-    <input id="m" autocomplete="off" />
-    <button id="sendButton">Send</button>
+    <div id="messageInputContainer">
+      <input id="m" autoComplete="off" />
+      <button id="sendButton">Send</button>
+      <p id="loginMessage"></p>
+    </div>
   </form>
-  <div id="messageInputContainer"></div>
+
   <script src="/socket.io/socket.io.js"></script>
   <script>
     document.addEventListener('DOMContentLoaded', () => {
@@ -20,6 +26,8 @@
       const form = document.getElementById('form');
       const input = document.getElementById('m');
       const sendButton = document.getElementById('sendButton');
+      const welcomeMessage = document.getElementById('welcomeMessage');
+      const loginMessage = document.getElementById('loginMessage');
 
       socket.on('chat message', (msg) => {
         const li = document.createElement('li');
@@ -59,6 +67,13 @@
           input.value = '';
         }
       });
+
+      // Display welcome message and login message
+      if (user && user.isAuthenticated) {
+        welcomeMessage.textContent = `Welcome, ${user.username}!`;
+      } else {
+        loginMessage.textContent = 'You need to log in to send messages.';
+      }
     });
   </script>
 </body>
