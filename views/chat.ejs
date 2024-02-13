@@ -1,0 +1,51 @@
+<!-- Update your existing chat.ejs file -->
+<body>
+    <h1>Chat Room</h1>
+    <ul id="messages"></ul>
+    <form id="form" action="">
+      <input id="m" autocomplete="off" /><button id="sendButton">Send</button>
+    </form>
+  
+    <script src="<%= '/socket.io/socket.io.js' %>"></script>
+    <script>
+      document.addEventListener('DOMContentLoaded', () => {
+        const socket = io();
+        const messagesContainer = document.getElementById('messages');
+        const form = document.getElementById('form');
+        const input = document.getElementById('m');
+        const sendButton = document.getElementById('sendButton');
+  
+        socket.on('chat message', (msg) => {
+          const li = document.createElement('li');
+          li.textContent = `${msg.username}: ${msg.content}`;
+          messagesContainer.appendChild(li);
+        });
+  
+        form.addEventListener('submit', (e) => {
+          e.preventDefault();
+          const message = input.value.trim();
+          if (message !== '') {
+            socket.emit('chat message', message);
+            // Append the sender's message to the messagesContainer
+            const li = document.createElement('li');
+            li.textContent = `You: ${message}`;
+            messagesContainer.appendChild(li);
+            input.value = '';
+          }
+        });
+  
+        sendButton.addEventListener('click', () => {
+          const message = input.value.trim();
+          if (message !== '') {
+            socket.emit('chat message', message);
+            // Append the sender's message to the messagesContainer
+            const li = document.createElement('li');
+            li.textContent = `You: ${message}`;
+            messagesContainer.appendChild(li);
+            input.value = '';
+          }
+        });
+      });
+    </script>
+  </body>
+  

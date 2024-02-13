@@ -82,6 +82,7 @@ app.use(session({ secret: 'your-secret-key', resave: true, saveUninitialized: tr
 app.use(passport.initialize());
 app.use(passport.session());
 app.use('/api', messagesRouter);
+app.use('/socket.io', express.static(path.join(__dirname, 'node_modules/socket.io/client-dist')));
 app.use(cors());
 
 const sessionMiddleware = session({
@@ -154,12 +155,12 @@ io.on('connection', (socket) => {
 
   console.log('User connected:', socket.request.session.passport.user);
 
-  socket.on('unauthorized', (message) => {
+  socket.on('disconnect', (message) => {
     console.error(message)
     console.log('User disconnected');
   });
 
-  socket.on('chat message',async (msg) => {
+  socket.on('chat message', async (msg) => {
     console.log('Received message: ', msg);
 
     try {
@@ -171,8 +172,10 @@ io.on('connection', (socket) => {
     } catch (error){
       console.error('Error storing message in the database: ', error);
     }
-    io.emit('chat message', msg);
-    console.log('Emitted chat messages to all clients');
+    io.emit('chat message', {
+      content: msg,
+      username: socket.request.session.passport.user,
+    });
   });
 });
 
