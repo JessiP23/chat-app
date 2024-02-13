@@ -38,9 +38,6 @@ process.on('SIGINT', () => {
   });
 });
 
-app.listen(port, () => {
-  console.log(`Server is running on port ${port}`)
-})
 
 mongoose.connect('mongodb://localhost:27017/chatapp', { 
   useNewUrlParser: true,
@@ -81,7 +78,7 @@ const logger = winston.createLogger({
 // Configure session and authentication
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
-app.use(session({ secret: 'your-secret-key', resave: true, saveUninitialized: true }));
+app.use(session({ secret: 'your-secret-key', resave: true, saveUninitialized: true}));
 app.use(passport.initialize());
 app.use(passport.session());
 app.use('/api', messagesRouter);
@@ -92,8 +89,6 @@ const sessionMiddleware = session({
   resave: true,
   saveUninitialized: true,
 });
-
-app.use(sessionMiddleware);
 
 // Passport local strategy for user authentication
 passport.use(new LocalStrategy(
@@ -125,13 +120,16 @@ passport.serializeUser((user, done) => {
 });
 
 passport.deserializeUser((id, done) => {
-  User.findById(id).exec()
-  .then(user => {
-    done(null, user);
-  })
-  .catch(err => {
-    done(err);
-  });
+  const User = mongoose.model('User');
+
+  User.findById(id)
+    .exec()
+    .then(user => {
+      done(null, user);
+    })
+    .catch(err => {
+      done(err, null);
+    });
 });
 
 // Express middleware for authentication
@@ -156,8 +154,9 @@ io.on('connection', (socket) => {
 
   console.log('User connected:', socket.request.session.passport.user);
 
-  socket.on('disconnect', () => {
-      console.log('User disconnected');
+  socket.on('unauthorized', (message) => {
+    console.error(message)
+    console.log('User disconnected');
   });
 
   socket.on('chat message',async (msg) => {
@@ -222,6 +221,9 @@ app.get('/', (req, res) => {
   res.redirect('/login');
 });
 
+app.get('/dashboard', (req, res) => {
+  res.render('dashboard', {user: req.user});
+});
 
 app.get('/login', (req, res) => {
   res.render('login.ejs');
@@ -235,22 +237,21 @@ app.post('/login', passport.authenticate('local', {
   successRedirect: '/dashboard',
   failureRedirect: '/login',
   failureFlash: true,
+  session: true,
 }));
+
+app.get('/chat', isAuthenticated, (req, res) => {
+  res.render('chat.ejs', { user: req.user });
+});
 
 app.post('/logout', (req, res) => {
   req.logout();
   res.redirect('/login');
 });
 
-app.get('/dashboard', isAuthenticated, (req, res) => {
-  const user = req.user;
-  res.render('dashboard.ejs', { user });
-});
-
 app.set('view engine', 'ejs');
 
-// Start the server
-const PORT = process.env.PORT || 3001;
-server.listen(PORT, () => {
+const PORT = process.env.PORT || 3000;
+app.listen(PORT, () => {
   console.log(`Server listening on port ${PORT}`);
 });

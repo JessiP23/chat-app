@@ -1,24 +1,15 @@
 <!-- views/dashboard.ejs -->
-<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Chat Dashboard</title>
-</head>
 <body>
-  <% if (user && user.isAuthenticated) { %>
+  <% if (user) { %>
     <h1>Welcome, <%= user.username %>!</h1>
     <a href="/chat">Enter Chat Room</a>
+    <form action="/logout" method="post">
+      <button type="submit">Logout</button>
+    </form>
   <% } else { %>
     <p>You need to log in to access the chat.</p>
     <a href="/login">Login</a> | <a href="/register">Register</a>
   <% } %>
-
-  <!-- Add the following logout form inside the body tag -->
-  <form action="/logout" method="post">
-    <button type="submit">Logout</button>
-  </form>
 
   <script src="/socket.io/socket.io.js"></script>
   <script>
@@ -41,15 +32,10 @@
         e.preventDefault();
         const message = input.value.trim();
         if (message !== '') {
-          // Emit the message to the server
           socket.emit('chat message', message);
-
-          // Display the message locally
           const li = document.createElement('li');
           li.textContent = message;
           messagesContainer.appendChild(li);
-
-          // Clear the input field
           input.value = '';
         }
       });
@@ -57,22 +43,17 @@
       sendButton.addEventListener('click', () => {
         const message = input.value.trim();
         if (message !== '') {
-          // Emit the message to the server
           socket.emit('chat message', message);
-
-          // Display the message locally
           const li = document.createElement('li');
           li.textContent = message;
           messagesContainer.appendChild(li);
-
-          // Clear the input field
           input.value = '';
         }
       });
 
-      // Display welcome message and login message
-      if (user && user.isAuthenticated) {
-        welcomeMessage.textContent = `Welcome, ${user.username}!`;
+      const isAuthenticated = "<%= user ? 'true' : 'false' %>";
+      if (isAuthenticated === 'true') {
+        welcomeMessage.textContent = `Welcome, ${user.username || 'User'}!`;
       } else {
         loginMessage.textContent = 'You need to log in to send messages.';
       }
