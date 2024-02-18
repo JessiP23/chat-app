@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="en">    
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Search Users</title>
+    </head>
+    <body>
+        <h1>Search Users</h1>
+        <input id="userSearch" placeholder="Search for users" />
+        <button id="searchButton">Search</button>
+        <ul id="userList"></ul>
+
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.0/socket.io.js"></script>
+        <script>
+            document.addEventListener('DOMContentLoaded', () => {
+                const socket = io();
+                const userSearch = document.getElementById('userSearch');
+                const searchButton = document.getElementById('searchButton');
+                const userList = document.getElementById('userList');
+
+                searchButton.addEventListener('click', async () => {
+                    const query = userSearch.value.trim();
+                    const response = await fetch(`/search/users?query=${query}`, {
+                        method: 'GET',
+                        headers: { 'Content-Type': 'application/json'},
+                    });
+
+                    const users = await response.json();
+
+                    userList.innerHTML = '';
+                    users.forEach((user) => {
+                        const li = document.createElement('li');
+                        li.textContent = user.username;
+                        li.addEventListener('click', () => startChatWithUser(user.username));
+                        userList.appendChild(li);
+                    });
+                });
+
+                function startChatWithUser(username){
+                    console.log('Starting chat with user:', username);
+                    window.location.href = `/chat/${username}`;
+                }
+            });
+        </script>
+    </body>
+</html>

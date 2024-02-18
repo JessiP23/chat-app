@@ -1,6 +1,7 @@
 {
   "name": "chat",
   "version": "1.0.0",
+  "type": "module",
   "description": "",
   "main": "index.js",
   "scripts": {
@@ -12,6 +13,8 @@
   "dependencies": {
     "axios": "^1.6.7",
     "bcrypt": "^5.1.1",
+    "connect-mongo": "^5.1.0",
+    "cookie-parser": "^1.4.6",
     "ejs": "^3.1.9",
     "emoji-mart": "^5.5.2",
     "express": "^4.18.2",
@@ -23,6 +26,7 @@
     "nodemailer": "^6.9.9",
     "passport": "^0.7.0",
     "passport-local": "^1.0.0",
+    "passport.socketio": "^3.7.0",
     "socket.io": "^4.7.4",
     "winston": "^3.11.0"
   }

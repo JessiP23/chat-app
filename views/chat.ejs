@@ -1,12 +1,18 @@
-<!-- Update your existing chat.ejs file -->
-<body>
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chat Page</title>
+  </head>
+  <body>
     <h1>Chat Room</h1>
     <ul id="messages"></ul>
     <form id="form" action="">
       <input id="m" autocomplete="off" /><button id="sendButton">Send</button>
     </form>
   
-    <script src="<%= '/socket.io/socket.io.js' %>"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.0/socket.io.js"></script>
     <script>
       document.addEventListener('DOMContentLoaded', () => {
         const socket = io();
@@ -14,33 +20,47 @@
         const form = document.getElementById('form');
         const input = document.getElementById('m');
         const sendButton = document.getElementById('sendButton');
-  
+        // Assuming targetUser is defined elsewhere in your code
+        const targetUser = "<%= targetUser %>";
+
         socket.on('chat message', (msg) => {
           const li = document.createElement('li');
           li.textContent = `${msg.username}: ${msg.content}`;
           messagesContainer.appendChild(li);
         });
-  
+
+        socket.on('private chat message', (msg) => {
+          const li = document.createElement('li');
+          li.textContent = `${msg.username}: ${msg.content}`;
+          messagesContainer.appendChild(li);
+        });
+
         form.addEventListener('submit', (e) => {
           e.preventDefault();
-          const message = input.value.trim();
-          if (message !== '') {
-            socket.emit('chat message', message);
-            // Append the sender's message to the messagesContainer
+          const messageContent = input.value.trim();
+          if (messageContent !== '') {
+            const message = {
+              content: messageContent,
+              targetUser: "<%= targetUser %>", // Ensure this is correctly replaced
+            };
+            socket.emit('private chat message', message);
             const li = document.createElement('li');
-            li.textContent = `You: ${message}`;
+            li.textContent = `You: ${messageContent}`;
             messagesContainer.appendChild(li);
             input.value = '';
           }
         });
   
         sendButton.addEventListener('click', () => {
-          const message = input.value.trim();
-          if (message !== '') {
-            socket.emit('chat message', message);
-            // Append the sender's message to the messagesContainer
+          const messageContent = input.value.trim();
+          if (messageContent !== '') {
+            const message = {
+              content: messageContent,
+              targetUser: "<%= targetUser %>", // Ensure this is correctly replaced
+            };
+            socket.emit('private chat message', message);
             const li = document.createElement('li');
-            li.textContent = `You: ${message}`;
+            li.textContent = `You: ${messageContent}`;
             messagesContainer.appendChild(li);
             input.value = '';
           }
@@ -48,4 +68,4 @@
       });
     </script>
   </body>
-  
+</html>

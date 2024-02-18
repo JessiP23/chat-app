@@ -7,6 +7,7 @@ const mongoose = require('mongoose');
 const Message = require('./models/message');
 const messagesRouter = ('./routes/messages');
 const userController = require('./userController');
+const { isAxiosError } = require('axios');
 const io = require('socket.io')(http);
 
 // Create an Express app
@@ -87,9 +88,32 @@ passport.deserializeUser((id, done) => {
   });
 });
 
-// Other app configurations...
+app.get('/search/users', isAuthenticated, async (req, res) => {
+  try{
+    const { query } = req.query;
+    const users = await User.find({ username: { $regex: new RegExp(query, 'i')}}, 'username');
+    res.render('search-users', { user: req.user, users});
+  } catch (error) {
+    console.error('Error searching users', error);
+    res.status(500).send('Internal Server Error');
+  }
+});
 
-// Start the server
+app.get('/chat/:username', isAuthenticated, (req, res) => {
+  const { username } = req.params;
+  res.render('chat', { user: req.user, targetUser: username});
+});
+
+app.post('/logout', (req, res) => {
+  req.logout((err) => {
+    if (err) {
+      console.error('Logout error:', err);
+      return res.status(500).send('Internal Server Error');
+    }
+    res.redirect('/login');
+  });
+});
+
 app.listen(3000, () => {
   console.log('Server listening on port 3000');
 });

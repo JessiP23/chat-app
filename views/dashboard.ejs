@@ -1,63 +1,103 @@
-<!-- views/dashboard.ejs -->
-<body>
-  <% if (user) { %>
-    <h1>Welcome, <%= user.username %>!</h1>
-    <a href="/chat">Enter Chat Room</a>
-    <form action="/logout" method="post">
-      <button type="submit">Logout</button>
-    </form>
-  <% } else { %>
-    <p>You need to log in to access the chat.</p>
-    <a href="/login">Login</a> | <a href="/register">Register</a>
-  <% } %>
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chat Page</title>
+  </head>
+  <body>
+    <% if (user) { %>
+      <h1>Welcome, <%= user.username %>!</h1>
+      <a href="#" id="goToUserList">Go to User List</a>
+      <input id="userSearch" placeholder="Search for users" />
+      <button id="searchButton">Search</button>
+      <ul id="userList"></ul>
 
-  <script src="/socket.io/socket.io.js"></script>
-  <script>
-    document.addEventListener('DOMContentLoaded', () => {
-      const socket = io();
-      const messagesContainer = document.getElementById('messages');
-      const form = document.getElementById('form');
-      const input = document.getElementById('m');
-      const sendButton = document.getElementById('sendButton');
-      const welcomeMessage = document.getElementById('welcomeMessage');
-      const loginMessage = document.getElementById('loginMessage');
+      <form action="/logout" method="post">
+        <button type="submit">Logout</button>
+      </form>
 
-      socket.on('chat message', (msg) => {
-        const li = document.createElement('li');
-        li.textContent = msg;
-        messagesContainer.appendChild(li);
-      });
+      <h2>Chat Room</h2>
+      <ul id="messages"></ul>
+      <form id="form" action="">
+        <input id="m" autocomplete="off" /><button id="sendButton">Send</button>
+      </form>
 
-      form.addEventListener('submit', (e) => {
-        e.preventDefault();
-        const message = input.value.trim();
-        if (message !== '') {
-          socket.emit('chat message', message);
-          const li = document.createElement('li');
-          li.textContent = message;
-          messagesContainer.appendChild(li);
-          input.value = '';
-        }
-      });
+      <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.0/socket.io.js"></script>
+      <script>
+        document.addEventListener('DOMContentLoaded', () => {
+          const socket = io();
+          const userSearch = document.getElementById('userSearch');
+          const searchButton = document.getElementById('searchButton');
+          const userList = document.getElementById('userList');
+          const messagesContainer = document.getElementById('messages');
+          const form = document.getElementById('form');
+          const input = document.getElementById('m');
+          const sendButton = document.getElementById('sendButton');
+          const goToUserList = document.getElementById('goToUserList');
 
-      sendButton.addEventListener('click', () => {
-        const message = input.value.trim();
-        if (message !== '') {
-          socket.emit('chat message', message);
-          const li = document.createElement('li');
-          li.textContent = message;
-          messagesContainer.appendChild(li);
-          input.value = '';
-        }
-      });
+          searchButton.addEventListener('click', async () => {
+            const query = userSearch.value.trim();
+            const response = await fetch(`/search/users?query=${query}`, {
+              method: 'GET',
+              headers: { 'Content-Type': 'application/json' },
+            });
 
-      const isAuthenticated = "<%= user ? 'true' : 'false' %>";
-      if (isAuthenticated === 'true') {
-        welcomeMessage.textContent = `Welcome, ${user.username || 'User'}!`;
-      } else {
-        loginMessage.textContent = 'You need to log in to send messages.';
-      }
-    });
-  </script>
-</body>
+            const users = await response.json();
+
+            userList.innerHTML = '';
+            users.forEach((user) => {
+              const li = document.createElement('li');
+              li.textContent = user.username;
+              li.addEventListener('click', () => startChatWithUser(user.username));
+              userList.appendChild(li);
+            });
+          });
+
+          function startChatWithUser(username) {
+            // Redirect to the chat room for the selected user
+            window.location.href = `/chat/${username}`;
+          }
+
+          socket.on('chat message', (msg) => {
+            const li = document.createElement('li');
+            li.textContent = msg;
+            messagesContainer.appendChild(li);
+          });
+
+          form.addEventListener('submit', (e) => {
+            e.preventDefault();
+            const message = input.value.trim();
+            if (message !== '') {
+              socket.emit('chat message', message);
+              const li = document.createElement('li');
+              li.textContent = message;
+              messagesContainer.appendChild(li);
+              input.value = '';
+            }
+          });
+
+          sendButton.addEventListener('click', () => {
+            const message = input.value.trim();
+            if (message !== '') {
+              socket.emit('chat message', message);
+              const li = document.createElement('li');
+              li.textContent = message;
+              messagesContainer.appendChild(li);
+              input.value = '';
+            }
+          });
+
+          goToUserList.addEventListener('click', (e) => {
+            e.preventDefault();
+            // Redirect to the user list page
+            window.location.href = "/search/users";
+          });
+        });
+      </script>
+    <% } else { %>
+      <p>You need to log in to access the chat.</p>
+      <a href="/login">Login</a> | <a href="/register">Register</a>
+    <% } %>
+  </body>
 </html>
